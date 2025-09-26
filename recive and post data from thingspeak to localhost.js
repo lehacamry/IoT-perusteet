@@ -11,7 +11,7 @@ app.get('/', async (req, res) => {
   try {
     const url = `${FEED}${CHANNEL}/feeds.json?api_key=${API_KEY}&results=${NUMBER_OF_ENTRIES}`;
 
-    // встроенный fetch
+  
     const response = await fetch(url);
     const data = await response.json();
 
