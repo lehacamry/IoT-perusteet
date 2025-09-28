@@ -2,6 +2,7 @@ import network
 import time
 import urequests
 import dht
+import utime
 from machine import Pin
 
 ssid ="xxx"  # Replace with your WiFi SSID
@@ -22,12 +23,13 @@ print("Connected!")
 print("IP Address:", wlan.ifconfig()[0])
 
 sensor = dht.DHT11(Pin(15))
-
+led = machine.Pin('LED', machine.Pin.OUT)
+led.toggle()
 
 # Send data to ThingSpeak
 def send_to_thingspeak(temperature, humidity):
     if temperature is None or humidity is None:
-        print("Nthing to send")
+        print("Nothing to send")
         return
 
     try:
@@ -49,8 +51,15 @@ while True:
         temperature = sensor.temperature()
         humidity = sensor.humidity()
         print("Temperature: {}°C, Humidity: {}%".format(temperature, humidity))
+
+        # Format manually
+        t = time.localtime()
+        timestamp = "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+        t[0], t[1], t[2], t[3], t[4], t[5]
+        )
+
+        print("LAST UPDATE:", timestamp)
         send_to_thingspeak(temperature, humidity)
     except Exception as e:
         print("Error reading sensor or sending data:", e)
-    
     time.sleep(600)
