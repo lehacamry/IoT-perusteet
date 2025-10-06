@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fi">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Lämpötila ja kosteus data</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet" />
+
+        <style>
+            :root { --page-pad: 24px; }
+            body {
+                margin: 0;
+                font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            }
+            .page-title {
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                font-weight: 700;
+                font-size: clamp(28px, 4vw, 42px);
+                line-height: 1.2;
+                letter-spacing: 0.3px;
+                margin: var(--page-pad);
+                margin-bottom: 8px;
+                background: linear-gradient(90deg, #0ea5e9, #22c55e);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .page-sub {
+                margin: 0 var(--page-pad) 28px;
+                color: #334155;
+                font-size: clamp(14px, 2vw, 18px);
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                font-weight: 600;
+            }
+            .content { padding: 0 var(--page-pad) var(--page-pad); }
+            .chart-toolbar {
+                display: flex;
+                align-items: baseline;
+                gap: 16px;
+                margin: 0 var(--page-pad) 12px;
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            }
+            .chart-toolbar #chart_title_text {
+                font-weight: 700;
+                font-size: 20px;
+                color: #0f172a;
+            }
+            .chart-toolbar a {
+                font-weight: 600;
+                font-size: 14px;
+                color: #0ea5e9;
+                text-decoration: none;
+            }
+            .chart-toolbar a:hover { text-decoration: underline; }
+            #temp_and_hum_now {
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                font-weight: 600;
+                font-size: 28px;
+                margin-bottom: 20px;
+                color: #db5b06;
+            }
+            #chart_div {
+                width: 100%;
+                max-width: 1500px;
+                height: 800px;
+            }
+            #output {
+                margin-top: 20px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            }
+            #copyright {
+                margin-top: 20px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            }
+
+            .webhook-box {
+                display: grid;
+                gap: 8px;
+                margin: 24px var(--page-pad) 0;
+                max-width: 900px;
+            }
+            .webhook-box label {
+                font-weight: 600;
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            }
+            .webhook-row {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+            #webhook_url {
+                flex: 1;
+                min-width: 320px;
+                padding: 10px 12px;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                font-size: 14px;
+            }
+            #send_discord {
+                padding: 10px 14px;
+                border: 0;
+                border-radius: 10px;
+                cursor: pointer;
+                font-weight: 600;
+                font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+                background: #0ea5e9;
+                color: white;
+            }
+            #send_discord:hover { opacity: 0.9; }
+            #send_status {
+                min-height: 20px;
+                font-size: 14px;
+                color: #334155;
+            }
+        </style>
+
+        <script src="https://www.gstatic.com/charts/loader.js"></script>
+    </head>
+    <body>
+        <h1 class="page-title">Lämpötila ja kosteus (Pico W + DHT11 + ThingSpeak)</h1>
+        <p class="page-sub">Tiedot päivittyvät 10 minuutin välein (time.sleep(600))</p>
+        <br />
+        <div id="temp_and_hum_now" align="center"></div>
+        <br />
+        <div class="webhook-box">
+                <label for="webhook_url">Viesti Discordiin Webhook</label>
+                <div class="webhook-row">
+                    <input type="url" id="webhook_url" placeholder="https://discord.com/api/webhooks/...(Laita tähän oman palvelimesi webhook-osoite)" />
+                    <button id="send_discord">Lähetä viimeisin mittaus →</button>
+                </div>
+                <div id="send_status"></div>
+            </div>
+        <div class="content">
+            <div class="chart-toolbar">
+                <span id="chart_title_text">Lämpötila ja kosteusdata viimeisen vuorokauden ajalta</span>
+                <a href="#" id="range_toggle" onclick="toggleRange(); return false;">Näytä tiedot 30 päivää →</a>
+            </div>
+
+            <div id="chart_div"></div>
+            <div id="output"></div>
+
+        </div>
+
+        <script src="googlechart.js"></script>
+        <div id="copyright">copyright by AG</div>
+    </body>
+</html>

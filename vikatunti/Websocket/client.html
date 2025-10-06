@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>WebSocket</title>
+    </head>
+    <body>
+        <h1>Websocket harjoitus</h1>
+        <Input id="msg" />
+        <button onclick="sendMessage()">Lähetä</button>
+        <div id="log"> </div>
+    </body>
+    <script>
+        const socket = new WebSocket('ws://localhost:8080');
+        socket.onopen = () => {
+            document.getElementById('log').innerText += 'Yhdistetty palvelimeen \n';
+        };
+        socket.onmessage = event => {
+            document.getElementById('log').innerText += 'Palvelin: ' + event.data + '\n';
+        };
+
+        function sendMessage() {
+            const msg = document.getElementById('msg').value;
+            socket.send(msg);
+
+        }
+    </script>
+</html>
