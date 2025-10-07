@@ -4,6 +4,34 @@ google.charts.setOnLoadCallback(loadAndDraw);
 let RANGE_DAYS = 1;
 let LAST_MEASUREMENT_TEXT = '';
 
+let captchaOk = false;
+let captchaWidgetId = null;
+
+
+window.initCaptcha = function () {
+    const container = document.getElementById('recaptcha_container');
+    if (!container || !window.grecaptcha) return;
+
+
+    captchaWidgetId = grecaptcha.render(container, {
+        sitekey: '6LeQn-ErAAAAAIwOngtI5W3_Wzr3BhP7UF_ZPXwn', // your SITE KEY
+        callback: onCaptchaSuccess,
+        'expired-callback': onCaptchaExpired
+    });
+};
+
+window.onCaptchaSuccess = function () {
+    captchaOk = true;
+    const btn = document.getElementById('send_discord');
+    if (btn) btn.disabled = false;
+};
+
+window.onCaptchaExpired = function () {
+    captchaOk = false;
+    const btn = document.getElementById('send_discord');
+    if (btn) btn.disabled = true;
+};
+
 function toggleRange() {
     RANGE_DAYS = (RANGE_DAYS === 1) ? 30 : 1;
     updateToolbarText();
@@ -11,15 +39,15 @@ function toggleRange() {
 }
 
 function updateToolbarText() {
-    const title1 = document.getElementById('chart_title_text');
-    const link1 = document.getElementById('range_toggle');
-    if (title1) {
-        title1.textContent = (RANGE_DAYS === 1)
+    const titleEl = document.getElementById('chart_title_text');
+    const linkEl = document.getElementById('range_toggle');
+    if (titleEl) {
+        titleEl.textContent = (RANGE_DAYS === 1)
             ? 'Lämpötila ja kosteusdata viimeisen vuorokauden ajalta'
             : 'Lämpötila ja kosteusdata viimeisen 30 päivän ajalta';
     }
-    if (link1) {
-        link1.textContent = (RANGE_DAYS === 1)
+    if (linkEl) {
+        linkEl.textContent = (RANGE_DAYS === 1)
             ? 'Katso tiedot 30pv ajalta →'
             : 'Katso tiedot 24h ajalta →';
     }
@@ -30,24 +58,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     btn.addEventListener('click', async () => {
         const input = document.getElementById('webhook_url');
-        const statusSent = document.getElementById('send_status');
-        if (!input || !statusSent) return;
+        const statusEl = document.getElementById('send_status');
+        if (!input || !statusEl) return;
+
+
+        const token = (window.grecaptcha && captchaWidgetId !== null)
+            ? grecaptcha.getResponse(captchaWidgetId)
+            : '';
+        if (!captchaOk || !token) {
+            statusEl.textContent = 'Suorita reCAPTCHA-vahvistus ensin.';
+            return;
+        }
 
         const webhookUrl = (input.value || '').trim();
         if (!webhookUrl) {
-            statusSent.textContent = 'Anna webhook-osoite.';
+            statusEl.textContent = 'Anna webhook-osoite.';
             return;
         }
         if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
-            statusSent.textContent = 'Virheellinen Discord webhook -osoite.';
+            statusEl.textContent = 'Virheellinen Discord webhook -osoite.';
             return;
         }
         if (!LAST_MEASUREMENT_TEXT) {
-            statusSent.textContent = 'Ei mittaustietoja lähetettäväksi.';
+            statusEl.textContent = 'Ei mittaustietoja lähetettäväksi.';
             return;
         }
 
-        statusSent.textContent = 'Lähetetään...';
+        statusEl.textContent = 'Lähetetään...';
         try {
             const resp = await fetch(webhookUrl, {
                 method: 'POST',
@@ -59,6 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusEl.textContent = `Discord virhe: ${resp.status}. ${t.slice(0, 120)}`;
             } else {
                 statusEl.textContent = 'OK: Viesti lähetetty Discordiin.';
+
+                if (window.grecaptcha && captchaWidgetId !== null) {
+                    grecaptcha.reset(captchaWidgetId);
+                }
+                onCaptchaExpired();
             }
         } catch (e) {
             statusEl.textContent = 'Verkkovirhe (voi olla CORS).';
@@ -70,8 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadAndDraw() {
     updateToolbarText();
 
-    const RESULT = (RANGE_DAYS > 1) ? 5000 : 150;
-    const URL = `https://api.thingspeak.com/channels/3084084/feeds.json?api_key=UXLQYQVQJYDYCPZL&results=${RESULT}`;
+    const RESULTS = (RANGE_DAYS > 1) ? 5000 : 150;
+    const URL = `https://api.thingspeak.com/channels/3084084/feeds.json?api_key=UXLQYQVQJYDYCPZL&results=${RESULTS}`;
 
     fetch(URL)
         .then(response => response.json())
@@ -88,6 +130,7 @@ function loadAndDraw() {
 
             let latestMeasurement = null;
             let latestTime = null;
+            let earliestTime = null;
 
             const dataTable = new google.visualization.DataTable();
             dataTable.addColumn('datetime', 'Kellonaika');
@@ -103,6 +146,10 @@ function loadAndDraw() {
                     date >= from && date <= now
                 ) {
                     dataTable.addRow([date, item.temperature, item.humidity]);
+
+                    if (!earliestTime || date < earliestTime) {
+                        earliestTime = date;
+                    }
                     if (!latestTime || date > latestTime) {
                         latestTime = date;
                         latestMeasurement = { date, temperature: item.temperature, humidity: item.humidity };
@@ -123,9 +170,11 @@ function loadAndDraw() {
                 LAST_MEASUREMENT_TEXT = '';
             }
 
+            const effectiveFrom = earliestTime ? new Date(Math.max(earliestTime, from)) : from;
+
             const ticks = (RANGE_DAYS === 1)
-                ? buildHourlyTicks(from, now)
-                : buildDailyTicks(from, now);
+                ? buildHourlyTicks(effectiveFrom, now)
+                : buildDailyTicks(effectiveFrom, now);
 
             const options = {
                 fontName: 'Poppins',
@@ -139,6 +188,8 @@ function loadAndDraw() {
                     title: 'Kellonaika',
                     format: (RANGE_DAYS === 1) ? 'HH:mm' : 'dd.MM.',
                     ticks: ticks,
+                    viewWindowMode: 'explicit',
+                    viewWindow: { min: effectiveFrom, max: now },
                     titleTextStyle: { fontName: 'Poppins', fontSize: 12, bold: true }
                 },
                 vAxis: {
