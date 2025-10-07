@@ -14,7 +14,7 @@ window.initCaptcha = function () {
 
 
     captchaWidgetId = grecaptcha.render(container, {
-        sitekey: '6LeQn-ErAAAAAIwOngtI5W3_Wzr3BhP7UF_ZPXwn', // your SITE KEY
+        sitekey: '', // your GOOGLE CAPTCHA SITE KEY
         callback: onCaptchaSuccess,
         'expired-callback': onCaptchaExpired
     });
